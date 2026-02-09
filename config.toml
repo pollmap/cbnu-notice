@@ -1,9 +1,8 @@
 [bot]
-telegram_channel = "@cbnu_notice"       # 기본 채널 (대학 본부 공지)
+telegram_channel = "@cbnu_notice"       # 모든 공지가 이 채널로 전송됨
 log_channel = ""
 max_notices_per_run = 20
 message_delay_ms = 150
-# 학과 공지는 각 source에서 channel = "@cbnu_dept" 로 지정
 
 [database]
 path = "notices.db"
@@ -46,7 +45,6 @@ display_name = "📚 인문대학"
 parser = "egov"
 url = "https://humanum.chungbuk.ac.kr/www/selectBbsNttList.do"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 bbsNo = "5"
@@ -63,7 +61,6 @@ display_name = "🏛️ 사회학과"
 parser = "ciboard"
 url = "https://sociology.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 board_name = "department_notice"
@@ -74,7 +71,6 @@ display_name = "🏛️ 행정학과"
 parser = "ciboard"
 url = "https://public.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 board_name = "department_notice"
@@ -85,7 +81,6 @@ display_name = "🏛️ 정치외교학과"
 parser = "ciboard"
 url = "https://politics.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 board_name = "department_notice"
@@ -96,7 +91,6 @@ display_name = "🧠 심리학과"
 parser = "ciboard"
 url = "https://psychology.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 board_name = "department_notice"
@@ -107,7 +101,6 @@ display_name = "💰 경제학과"
 parser = "ciboard"
 url = "https://econ.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 board_name = "department_notice"
@@ -122,7 +115,6 @@ display_name = "⚛️ 물리학과"
 parser = "php_master"
 url = "https://physics.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "145"
@@ -133,7 +125,6 @@ display_name = "📐 수학과"
 parser = "php_master"
 url = "https://math.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "145"
@@ -144,7 +135,6 @@ display_name = "🧬 생물학과"
 parser = "php_master"
 url = "https://biology.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "145"
@@ -155,7 +145,6 @@ display_name = "🧪 화학과"
 parser = "php_master"
 url = "https://chem.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "145"
@@ -166,7 +155,6 @@ display_name = "🔭 천문우주학과"
 parser = "php_master"
 url = "https://ast.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "146"
@@ -177,7 +165,6 @@ display_name = "📊 정보통계학과"
 parser = "php_master"
 url = "https://stat.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "145"
@@ -188,7 +175,6 @@ display_name = "🔬 생화학과"
 parser = "php_master"
 url = "https://biochem.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "145"
@@ -203,7 +189,6 @@ display_name = "🏢 경영학부"
 parser = "php_master"
 url = "https://biz.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "7"
@@ -218,7 +203,6 @@ display_name = "🏗️ 토목공학부"
 parser = "xe_board"
 url = "https://civil.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 mid = "board_jIDW98"
@@ -229,7 +213,6 @@ display_name = "🔩 신소재공학과"
 parser = "xe_board"
 url = "https://material.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 mid = "material5_1_1"
@@ -240,7 +223,6 @@ display_name = "🛡️ 안전공학과"
 parser = "xe_board"
 url = "https://safety.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 mid = "safety4_1"
@@ -251,7 +233,6 @@ display_name = "⚗️ 화학공학과"
 parser = "xe_board"
 url = "https://cheme.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 mid = "cheme7_1"
@@ -262,7 +243,6 @@ display_name = "⚙️ 기계공학부"
 parser = "xe_board"
 url = "https://me.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 mid = "me5_1"
@@ -273,7 +253,6 @@ display_name = "🌿 환경공학과"
 parser = "xe_board"
 url = "https://env.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 mid = "env5_1"
@@ -288,7 +267,6 @@ display_name = "💡 전자공학부"
 parser = "xe_board"
 url = "https://ee.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 mid = "sub0502"
@@ -299,7 +277,6 @@ display_name = "💻 소프트웨어학부"
 parser = "xe_board"
 url = "https://software.cbnu.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 mid = "sub0401"
@@ -314,7 +291,6 @@ display_name = "🌾 농업생명환경대학"
 parser = "php_master"
 url = "https://agri.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "154"
@@ -325,7 +301,6 @@ display_name = "🍽️ 식품생명공학과"
 parser = "php_master"
 url = "https://food.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "240"
@@ -336,7 +311,6 @@ display_name = "🌱 원예과학과"
 parser = "php_master"
 url = "https://hortisci.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "5"
@@ -351,7 +325,6 @@ display_name = "💊 약학대학"
 parser = "php_master"
 url = "https://pharm.chungbuk.ac.kr"
 enabled = true
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "148"
@@ -367,7 +340,6 @@ display_name = "🏥 간호학과"
 parser = "php_master"
 url = "https://nursing.chungbuk.ac.kr"
 enabled = false
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "183"
@@ -379,7 +351,6 @@ display_name = "🖥️ 컴퓨터공학과"
 parser = "php_master"
 url = "https://computer.chungbuk.ac.kr"
 enabled = false
-channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "0"
@@ -391,7 +362,6 @@ display_name = "👶 아동복지학과"
 parser = "ciboard"
 url = "https://childwelfare.chungbuk.ac.kr"
 enabled = false
-channel = "@cbnu_dept"
 
 [source.params]
 board_name = "department_notice"
@@ -402,7 +372,6 @@ display_name = "👗 의류학과"
 parser = "ciboard"
 url = "https://fashion.chungbuk.ac.kr"
 enabled = false
-channel = "@cbnu_dept"
 
 [source.params]
 board_name = "department_notice"
@@ -413,7 +382,6 @@ display_name = "🏠 주거환경학과"
 parser = "ciboard"
 url = "https://housing.chungbuk.ac.kr"
 enabled = false
-channel = "@cbnu_dept"
 
 [source.params]
 board_name = "department_notice"
@@ -424,7 +392,6 @@ display_name = "🛒 소비자학과"
 parser = "ciboard"
 url = "https://consumer.chungbuk.ac.kr"
 enabled = false
-channel = "@cbnu_dept"
 
 [source.params]
 board_name = "department_notice"
