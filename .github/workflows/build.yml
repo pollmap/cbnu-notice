@@ -29,5 +29,7 @@ jobs:
           tag_name: latest
           files: target/release/cbnu-notice-bot
           prerelease: true
+          body: |
+            자동 빌드 바이너리 (crawl.yml에서 사용)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

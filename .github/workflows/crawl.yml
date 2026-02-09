@@ -1,8 +1,8 @@
 name: Crawl
 on:
   schedule:
-    - cron: '*/15 * * * *'
-  workflow_dispatch:
+    - cron: '*/15 * * * *'    # 15분마다
+  workflow_dispatch:           # 수동 실행 가능
 
 jobs:
   crawl:
@@ -16,11 +16,12 @@ jobs:
             "https://github.com/${{ github.repository }}/releases/download/latest/cbnu-notice-bot"
           chmod +x cbnu-notice-bot
 
-      - name: Restore DB
-        uses: actions/download-artifact@v4
+      - name: Restore DB (cache)
+        uses: actions/cache/restore@v4
         with:
-          name: notice-db
-        continue-on-error: true
+          path: notices.db
+          key: notice-db-${{ github.run_id }}
+          restore-keys: notice-db-
 
       - name: Run crawler
         run: ./cbnu-notice-bot crawl
@@ -29,11 +30,9 @@ jobs:
           CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
           LOG_CHANNEL_ID: ${{ secrets.TELEGRAM_LOG_CHANNEL }}
 
-      - name: Save DB
-        uses: actions/upload-artifact@v4
+      - name: Save DB (cache)
+        uses: actions/cache/save@v4
         if: always()
         with:
-          name: notice-db
           path: notices.db
-          retention-days: 90
-          overwrite: true
+          key: notice-db-${{ github.run_id }}
