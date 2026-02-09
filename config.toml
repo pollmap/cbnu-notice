@@ -1,0 +1,120 @@
+[bot]
+telegram_channel = "@cbnu_notice"
+log_channel = ""
+max_notices_per_run = 20
+message_delay_ms = 150
+
+[database]
+path = "notices.db"
+
+# ══════════════════════════════════════
+# 대학 본부 (eGov)
+# ══════════════════════════════════════
+
+[[source]]
+key = "cbnu_main"
+display_name = "📢 충북대 공지"
+parser = "egov"
+url = "https://www.chungbuk.ac.kr/www/selectBbsNttList.do"
+enabled = true
+
+[source.params]
+bbsNo = "8"
+key = "813"
+pageUnit = "10"
+
+[[source]]
+key = "cbnu_service"
+display_name = "📋 서비스공지"
+parser = "egov"
+url = "https://www.cbnu.ac.kr/service/selectBbsNttList.do"
+enabled = true
+
+[source.params]
+bbsNo = "55"
+key = "190"
+pageUnit = "10"
+
+# ══════════════════════════════════════
+# 학과 (PHP master.php)
+# ══════════════════════════════════════
+
+[[source]]
+key = "biz"
+display_name = "🏢 경영학부"
+parser = "php_master"
+url = "https://biz.chungbuk.ac.kr"
+enabled = true
+
+[source.params]
+pg_idx = "7"
+
+[[source]]
+key = "ast"
+display_name = "🔭 천문우주학과"
+parser = "php_master"
+url = "https://ast.chungbuk.ac.kr"
+enabled = false
+
+[source.params]
+pg_idx = "146"
+
+[[source]]
+key = "physics"
+display_name = "⚛️ 물리학과"
+parser = "php_master"
+url = "https://physics.chungbuk.ac.kr"
+enabled = false
+
+[source.params]
+pg_idx = "126"
+
+[[source]]
+key = "math"
+display_name = "📐 수학과"
+parser = "php_master"
+url = "https://math.chungbuk.ac.kr"
+enabled = false
+
+[source.params]
+pg_idx = "146"
+
+[[source]]
+key = "hortisci"
+display_name = "🌱 원예과학과"
+parser = "php_master"
+url = "https://hortisci.chungbuk.ac.kr"
+enabled = false
+
+[source.params]
+pg_idx = "5"
+
+[[source]]
+key = "food"
+display_name = "🍽️ 식품생명공학과"
+parser = "php_master"
+url = "https://food.chungbuk.ac.kr"
+enabled = false
+
+[source.params]
+pg_idx = "244"
+
+[[source]]
+key = "biochem"
+display_name = "🧬 생화학과"
+parser = "php_master"
+url = "https://biochem.chungbuk.ac.kr"
+enabled = false
+
+[source.params]
+pg_idx = "149"
+
+[[source]]
+key = "nursing"
+display_name = "🏥 간호학과"
+parser = "php_master"
+url = "https://nursing.chungbuk.ac.kr"
+enabled = false
+
+[source.params]
+pg_idx = "183"
