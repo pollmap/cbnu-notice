@@ -27,6 +27,8 @@ enum Cli {
     Crawl,
     /// 봇 서버 시작 + 자동 크롤링 (상시 실행, 이것만 돌리면 됨)
     Serve,
+    /// 기존 공지를 DB에 저장만 하고 알림 안 보냄 (첫 실행 시 사용)
+    Seed,
 }
 
 #[tokio::main]
@@ -44,6 +46,7 @@ async fn main() -> anyhow::Result<()> {
     match cli {
         Cli::Crawl => run_crawl().await,
         Cli::Serve => run_serve().await,
+        Cli::Seed => run_seed().await,
     }
 }
 
@@ -84,6 +87,48 @@ async fn run_crawl() -> anyhow::Result<()> {
     };
 
     do_crawl(&cfg, &client, &db_path, notifier_opt.as_ref()).await
+}
+
+/// 시드 모드: 기존 공지를 DB에 저장만 하고 알림은 보내지 않음.
+/// 첫 배포 시 이걸 먼저 실행하면 기존 공지가 "이미 보냄" 처리되어 폭격 방지.
+async fn run_seed() -> anyhow::Result<()> {
+    let config_path = Path::new("config.toml");
+    let cfg = config::Config::load(config_path)?;
+    let client = build_http_client()?;
+    let db_path = resolve_db_path(&cfg);
+    let database = db::Database::init(&db_path)?;
+
+    let enabled_sources = cfg.enabled_sources();
+    tracing::info!(count = enabled_sources.len(), "Seeding database (no notifications)");
+
+    let mut total = 0u32;
+    for source_cfg in &enabled_sources {
+        let parser = parser::create_parser(source_cfg);
+        let source_key = parser.source_key().to_string();
+        let display_name = parser.display_name().to_string();
+
+        match fetch_with_retry(parser.as_ref(), &client).await {
+            Ok(notices) => {
+                let mut count = 0u32;
+                for notice in &notices {
+                    if database.insert_if_new(&source_key, notice, &display_name)? {
+                        count += 1;
+                    }
+                }
+                // 전부 "이미 보냄" 처리
+                database.mark_all_notified(&source_key)?;
+                database.update_crawl_state(&source_key, notices.first().map(|n| n.notice_id.as_str()))?;
+                tracing::info!(source = %source_key, saved = count, "Seeded");
+                total += count;
+            }
+            Err(e) => {
+                tracing::warn!(source = %source_key, error = %e, "Seed fetch failed (skipping)");
+            }
+        }
+    }
+
+    tracing::info!(total, "Seed complete. All existing notices marked as notified.");
+    Ok(())
 }
 
 /// 봇 서버 모드: 텔레그램 커맨드 수신 + 자동 크롤링.

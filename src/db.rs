@@ -192,6 +192,15 @@ impl Database {
         Ok(())
     }
 
+    /// Mark all notices from a source as notified (seed 모드용).
+    pub fn mark_all_notified(&self, source_key: &str) -> anyhow::Result<()> {
+        self.conn.execute(
+            "UPDATE notices SET notified = 1 WHERE source_key = ?1 AND notified = 0",
+            params![source_key],
+        )?;
+        Ok(())
+    }
+
     /// Update crawl state after successful crawl.
     pub fn update_crawl_state(&self, source_key: &str, last_id: Option<&str>) -> anyhow::Result<()> {
         let now = now_sqlite();

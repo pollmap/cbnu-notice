@@ -12,24 +12,26 @@ path = "notices.db"
 # 대학 본부 (eGov Framework)
 # ══════════════════════════════════════════════════════════
 
+# 메인 사이트 간헐적 503 (envoy CDN 이슈). 복구되면 enabled = true로.
 [[source]]
 key = "cbnu_main"
 display_name = "📢 충북대 공지"
 parser = "egov"
-url = "https://www.chungbuk.ac.kr/www/selectBbsNttList.do"
-enabled = true
+url = "https://www.cbnu.ac.kr/www/selectBbsNttList.do"
+enabled = false
 
 [source.params]
 bbsNo = "8"
 key = "813"
 pageUnit = "10"
 
+# 서비스공지도 동일 503 이슈.
 [[source]]
 key = "cbnu_service"
 display_name = "📋 서비스공지"
 parser = "egov"
 url = "https://www.cbnu.ac.kr/service/selectBbsNttList.do"
-enabled = true
+enabled = false
 
 [source.params]
 bbsNo = "55"
