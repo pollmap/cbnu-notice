@@ -15,8 +15,11 @@ pub fn extract_deadline(title: &str) -> Option<NaiveDate> {
     let deadline_keywords = ["까지", "마감", "이내"];
     for kw in &deadline_keywords {
         if let Some(pos) = title.find(kw) {
-            // 키워드 앞 40자 범위에서 날짜 검색
-            let start = pos.saturating_sub(40);
+            // 키워드 앞 40바이트 범위에서 날짜 검색 (char boundary 보정)
+            let mut start = pos.saturating_sub(40);
+            while start > 0 && !title.is_char_boundary(start) {
+                start -= 1;
+            }
             let region = &title[start..pos];
 
             if let Some(caps) = re_full.captures(region) {

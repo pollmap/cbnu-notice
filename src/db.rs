@@ -4,6 +4,13 @@ use rusqlite::{params, Connection};
 use crate::category::Category;
 use crate::parser::RawNotice;
 
+/// SQLite datetime() 호환 포맷으로 현재 시간 반환.
+/// RFC3339 대신 "YYYY-MM-DD HH:MM:SS" 형식을 사용해야
+/// SQLite의 datetime('now', '-1 day') 등과 올바르게 비교된다.
+fn now_sqlite() -> String {
+    Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
 /// 사용자 구독 정보.
 #[derive(Debug, Clone)]
 pub struct UserSubs {
@@ -116,7 +123,7 @@ impl Database {
         display_name: &str,
     ) -> anyhow::Result<bool> {
         let category = Category::classify(&notice.title);
-        let now = Utc::now().to_rfc3339();
+        let now = now_sqlite();
 
         let affected = self.conn.execute(
             "INSERT OR IGNORE INTO notices (source_key, notice_id, title, url, author, category, published, crawled_at)
@@ -187,7 +194,7 @@ impl Database {
 
     /// Update crawl state after successful crawl.
     pub fn update_crawl_state(&self, source_key: &str, last_id: Option<&str>) -> anyhow::Result<()> {
-        let now = Utc::now().to_rfc3339();
+        let now = now_sqlite();
         self.conn.execute(
             "INSERT INTO crawl_state (source_key, last_crawled, last_notice_id, error_count)
              VALUES (?1, ?2, ?3, 0)
@@ -202,7 +209,7 @@ impl Database {
 
     /// Increment error count and return the new count.
     pub fn increment_error(&self, source_key: &str) -> anyhow::Result<u32> {
-        let now = Utc::now().to_rfc3339();
+        let now = now_sqlite();
         self.conn.execute(
             "INSERT INTO crawl_state (source_key, last_crawled, error_count)
              VALUES (?1, ?2, 1)
