@@ -230,6 +230,7 @@ mod tests {
             url: "https://biz.chungbuk.ac.kr".into(),
             params,
             enabled: true,
+            channel: None,
         }
     }
 

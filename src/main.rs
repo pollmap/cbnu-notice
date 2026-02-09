@@ -96,11 +96,17 @@ async fn run_crawl() -> anyhow::Result<()> {
         None
     };
 
-    // 5. Build source display name map
+    // 5. Build source display name map + channel routing map
     let display_names: HashMap<String, String> = cfg
         .sources
         .iter()
         .map(|s| (s.key.clone(), s.display_name.clone()))
+        .collect();
+
+    let channel_map: HashMap<String, String> = cfg
+        .sources
+        .iter()
+        .filter_map(|s| s.channel.as_ref().map(|ch| (s.key.clone(), ch.clone())))
         .collect();
 
     // 6. Crawl each enabled source
@@ -173,16 +179,16 @@ async fn run_crawl() -> anyhow::Result<()> {
     // 7. Send pending notifications
     let pending = database.get_pending(cfg.bot.max_notices_per_run, &display_names)?;
     let sent = if let Some(ref notifier) = notifier_opt {
-        let sent_count = notifier.send_batch(&pending, cfg.bot.max_notices_per_run).await?;
+        let sent_ids = notifier.send_batch(&pending, cfg.bot.max_notices_per_run, &channel_map).await?;
 
-        // Mark sent notices as notified
-        for notice in pending.iter().take(sent_count) {
-            database.mark_notified(notice.id)?;
+        // Mark only successfully sent notices as notified
+        for id in &sent_ids {
+            database.mark_notified(*id)?;
         }
 
-        sent_count
+        sent_ids.len()
     } else {
-        // Dry-run: just print what would be sent
+        // Dry-run: print and mark as notified to avoid re-showing
         for notice in &pending {
             println!(
                 "[DRY-RUN] Would send: {} {} - {}",
@@ -190,8 +196,9 @@ async fn run_crawl() -> anyhow::Result<()> {
                 notice.source_display_name,
                 notice.title
             );
+            database.mark_notified(notice.id)?;
         }
-        0
+        pending.len()
     };
 
     // 8. 마감일 추출 + 저장

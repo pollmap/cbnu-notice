@@ -1,15 +1,16 @@
 [bot]
-telegram_channel = "@cbnu_notice"
+telegram_channel = "@cbnu_notice"       # 기본 채널 (대학 본부 공지)
 log_channel = ""
 max_notices_per_run = 20
 message_delay_ms = 150
+# 학과 공지는 각 source에서 channel = "@cbnu_dept" 로 지정
 
 [database]
 path = "notices.db"
 
-# ══════════════════════════════════════
-# 대학 본부 (eGov)
-# ══════════════════════════════════════
+# ══════════════════════════════════════════════════════════
+# 대학 본부 (eGov Framework)
+# ══════════════════════════════════════════════════════════
 
 [[source]]
 key = "cbnu_main"
@@ -35,9 +36,166 @@ bbsNo = "55"
 key = "190"
 pageUnit = "10"
 
-# ══════════════════════════════════════
-# 학과 (PHP master.php)
-# ══════════════════════════════════════
+# ══════════════════════════════════════════════════════════
+# 인문대학 (eGov Framework)
+# ══════════════════════════════════════════════════════════
+
+[[source]]
+key = "humanum"
+display_name = "📚 인문대학"
+parser = "egov"
+url = "https://humanum.chungbuk.ac.kr/www/selectBbsNttList.do"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+bbsNo = "5"
+key = "109"
+pageUnit = "10"
+
+# ══════════════════════════════════════════════════════════
+# 사회과학대학 (CIBoard - CodeIgniter)
+# ══════════════════════════════════════════════════════════
+
+[[source]]
+key = "sociology"
+display_name = "🏛️ 사회학과"
+parser = "ciboard"
+url = "https://sociology.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+board_name = "department_notice"
+
+[[source]]
+key = "public"
+display_name = "🏛️ 행정학과"
+parser = "ciboard"
+url = "https://public.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+board_name = "department_notice"
+
+[[source]]
+key = "politics"
+display_name = "🏛️ 정치외교학과"
+parser = "ciboard"
+url = "https://politics.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+board_name = "department_notice"
+
+[[source]]
+key = "psychology"
+display_name = "🧠 심리학과"
+parser = "ciboard"
+url = "https://psychology.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+board_name = "department_notice"
+
+[[source]]
+key = "econ"
+display_name = "💰 경제학과"
+parser = "ciboard"
+url = "https://econ.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+board_name = "department_notice"
+
+# ══════════════════════════════════════════════════════════
+# 자연과학대학 (PHP master.php)
+# ══════════════════════════════════════════════════════════
+
+[[source]]
+key = "physics"
+display_name = "⚛️ 물리학과"
+parser = "php_master"
+url = "https://physics.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "145"
+
+[[source]]
+key = "math"
+display_name = "📐 수학과"
+parser = "php_master"
+url = "https://math.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "145"
+
+[[source]]
+key = "biology"
+display_name = "🧬 생물학과"
+parser = "php_master"
+url = "https://biology.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "145"
+
+[[source]]
+key = "chem"
+display_name = "🧪 화학과"
+parser = "php_master"
+url = "https://chem.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "145"
+
+[[source]]
+key = "ast"
+display_name = "🔭 천문우주학과"
+parser = "php_master"
+url = "https://ast.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "146"
+
+[[source]]
+key = "stat"
+display_name = "📊 정보통계학과"
+parser = "php_master"
+url = "https://stat.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "145"
+
+[[source]]
+key = "biochem"
+display_name = "🔬 생화학과"
+parser = "php_master"
+url = "https://biochem.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "145"
+
+# ══════════════════════════════════════════════════════════
+# 경영대학 (PHP master.php)
+# ══════════════════════════════════════════════════════════
 
 [[source]]
 key = "biz"
@@ -45,76 +203,228 @@ display_name = "🏢 경영학부"
 parser = "php_master"
 url = "https://biz.chungbuk.ac.kr"
 enabled = true
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "7"
 
-[[source]]
-key = "ast"
-display_name = "🔭 천문우주학과"
-parser = "php_master"
-url = "https://ast.chungbuk.ac.kr"
-enabled = false
-
-[source.params]
-pg_idx = "146"
+# ══════════════════════════════════════════════════════════
+# 공과대학 (XpressEngine)
+# ══════════════════════════════════════════════════════════
 
 [[source]]
-key = "physics"
-display_name = "⚛️ 물리학과"
-parser = "php_master"
-url = "https://physics.chungbuk.ac.kr"
-enabled = false
+key = "civil"
+display_name = "🏗️ 토목공학부"
+parser = "xe_board"
+url = "https://civil.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
 
 [source.params]
-pg_idx = "126"
+mid = "board_jIDW98"
 
 [[source]]
-key = "math"
-display_name = "📐 수학과"
-parser = "php_master"
-url = "https://math.chungbuk.ac.kr"
-enabled = false
+key = "material"
+display_name = "🔩 신소재공학과"
+parser = "xe_board"
+url = "https://material.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
 
 [source.params]
-pg_idx = "146"
+mid = "material5_1_1"
 
 [[source]]
-key = "hortisci"
-display_name = "🌱 원예과학과"
-parser = "php_master"
-url = "https://hortisci.chungbuk.ac.kr"
-enabled = false
+key = "safety"
+display_name = "🛡️ 안전공학과"
+parser = "xe_board"
+url = "https://safety.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
 
 [source.params]
-pg_idx = "5"
+mid = "safety4_1"
+
+[[source]]
+key = "cheme"
+display_name = "⚗️ 화학공학과"
+parser = "xe_board"
+url = "https://cheme.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+mid = "cheme7_1"
+
+[[source]]
+key = "me"
+display_name = "⚙️ 기계공학부"
+parser = "xe_board"
+url = "https://me.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+mid = "me5_1"
+
+[[source]]
+key = "env"
+display_name = "🌿 환경공학과"
+parser = "xe_board"
+url = "https://env.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+mid = "env5_1"
+
+# ══════════════════════════════════════════════════════════
+# 전자정보대학 (XpressEngine)
+# ══════════════════════════════════════════════════════════
+
+[[source]]
+key = "ee"
+display_name = "💡 전자공학부"
+parser = "xe_board"
+url = "https://ee.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+mid = "sub0502"
+
+[[source]]
+key = "software"
+display_name = "💻 소프트웨어학부"
+parser = "xe_board"
+url = "https://software.cbnu.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+mid = "sub0401"
+
+# ══════════════════════════════════════════════════════════
+# 농업생명환경대학 (PHP master.php)
+# ══════════════════════════════════════════════════════════
+
+[[source]]
+key = "agri"
+display_name = "🌾 농업생명환경대학"
+parser = "php_master"
+url = "https://agri.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "154"
 
 [[source]]
 key = "food"
 display_name = "🍽️ 식품생명공학과"
 parser = "php_master"
 url = "https://food.chungbuk.ac.kr"
-enabled = false
+enabled = true
+channel = "@cbnu_dept"
 
 [source.params]
-pg_idx = "244"
+pg_idx = "240"
 
 [[source]]
-key = "biochem"
-display_name = "🧬 생화학과"
+key = "hortisci"
+display_name = "🌱 원예과학과"
 parser = "php_master"
-url = "https://biochem.chungbuk.ac.kr"
-enabled = false
+url = "https://hortisci.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
 
 [source.params]
-pg_idx = "149"
+pg_idx = "5"
 
+# ══════════════════════════════════════════════════════════
+# 약학대학 (PHP master.php)
+# ══════════════════════════════════════════════════════════
+
+[[source]]
+key = "pharm"
+display_name = "💊 약학대학"
+parser = "php_master"
+url = "https://pharm.chungbuk.ac.kr"
+enabled = true
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "148"
+
+# ══════════════════════════════════════════════════════════
+# 사이트 접속 불가 또는 미지원 CMS (disabled)
+# ══════════════════════════════════════════════════════════
+
+# 간호학과 - 503 Service Unavailable
 [[source]]
 key = "nursing"
 display_name = "🏥 간호학과"
 parser = "php_master"
 url = "https://nursing.chungbuk.ac.kr"
 enabled = false
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "183"
+
+# 컴퓨터공학과 - 자체 PHP BBS (별도 파서 필요)
+[[source]]
+key = "computer"
+display_name = "🖥️ 컴퓨터공학과"
+parser = "php_master"
+url = "https://computer.chungbuk.ac.kr"
+enabled = false
+channel = "@cbnu_dept"
+
+[source.params]
+pg_idx = "0"
+
+# 생활과학대학 학과들 - CMS 미확인
+[[source]]
+key = "childwelfare"
+display_name = "👶 아동복지학과"
+parser = "ciboard"
+url = "https://childwelfare.chungbuk.ac.kr"
+enabled = false
+channel = "@cbnu_dept"
+
+[source.params]
+board_name = "department_notice"
+
+[[source]]
+key = "fashion"
+display_name = "👗 의류학과"
+parser = "ciboard"
+url = "https://fashion.chungbuk.ac.kr"
+enabled = false
+channel = "@cbnu_dept"
+
+[source.params]
+board_name = "department_notice"
+
+[[source]]
+key = "housing"
+display_name = "🏠 주거환경학과"
+parser = "ciboard"
+url = "https://housing.chungbuk.ac.kr"
+enabled = false
+channel = "@cbnu_dept"
+
+[source.params]
+board_name = "department_notice"
+
+[[source]]
+key = "consumer"
+display_name = "🛒 소비자학과"
+parser = "ciboard"
+url = "https://consumer.chungbuk.ac.kr"
+enabled = false
+channel = "@cbnu_dept"
+
+[source.params]
+board_name = "department_notice"
