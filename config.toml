@@ -3,6 +3,7 @@ telegram_channel = "@cbnu_notice"       # 모든 공지가 이 채널로 전송�
 log_channel = ""
 max_notices_per_run = 20
 message_delay_ms = 150
+crawl_interval_secs = 900              # 자동 크롤링 간격 (15분)
 
 [database]
 path = "notices.db"

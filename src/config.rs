@@ -18,6 +18,8 @@ pub struct BotConfig {
     pub max_notices_per_run: usize,
     #[serde(default = "default_delay")]
     pub message_delay_ms: u64,
+    #[serde(default = "default_crawl_interval")]
+    pub crawl_interval_secs: u64,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -48,6 +50,9 @@ fn default_delay() -> u64 {
 }
 fn default_db_path() -> String {
     "notices.db".to_string()
+}
+fn default_crawl_interval() -> u64 {
+    900
 }
 fn default_true() -> bool {
     true

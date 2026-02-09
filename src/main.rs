@@ -23,9 +23,9 @@ use crate::parser::{NoticeParser, RawNotice};
 #[derive(Parser)]
 #[command(name = "cbnu-notice-bot", about = "충북대 공지사항 자동 알림 봇")]
 enum Cli {
-    /// 크롤링 실행 (GitHub Actions cron에서 호출)
+    /// 크롤링 1회 실행 (GitHub Actions cron에서 호출)
     Crawl,
-    /// 봇 서버 시작 (Phase 2, 상시 실행)
+    /// 봇 서버 시작 + 자동 크롤링 (상시 실행, 이것만 돌리면 됨)
     Serve,
 }
 
@@ -47,38 +47,19 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
+/// 크롤링 1회 실행 (CLI 또는 cron용).
 async fn run_crawl() -> anyhow::Result<()> {
-    // 1. Load config
     let config_path = Path::new("config.toml");
     let cfg = if config_path.exists() {
         config::Config::load(config_path)?
     } else {
-        tracing::warn!("config.toml not found, using minimal defaults");
         anyhow::bail!("config.toml is required. Please create it first.");
     };
 
-    // 2. Build HTTP client with SSL workaround
-    let client = reqwest::Client::builder()
-        .danger_accept_invalid_certs(true)
-        .user_agent("CBNU-Notice-Bot/1.0 (student project)")
-        .timeout(Duration::from_secs(15))
-        .build()?;
+    let client = build_http_client()?;
 
-    // 3. Initialize database
-    let database = db::Database::init(&cfg.database.path)?;
+    let (channel_id, log_channel_id) = resolve_channels(&cfg);
 
-    // 4. Build Telegram bot (from TELOXIDE_TOKEN env var)
-    let channel_id = std::env::var("CHANNEL_ID")
-        .or_else(|_| std::env::var("TELEGRAM_CHANNEL_ID"))
-        .unwrap_or_else(|_| cfg.bot.telegram_channel.clone());
-
-    let log_channel_id = std::env::var("LOG_CHANNEL_ID")
-        .or_else(|_| std::env::var("TELEGRAM_LOG_CHANNEL"))
-        .ok()
-        .or_else(|| cfg.bot.log_channel.clone())
-        .filter(|s| !s.is_empty());
-
-    // Check if TELOXIDE_TOKEN is set; if not, run in dry-run mode
     let dry_run = std::env::var("TELOXIDE_TOKEN").is_err();
     if dry_run {
         tracing::warn!("TELOXIDE_TOKEN not set. Running in dry-run mode (no Telegram messages).");
@@ -96,7 +77,119 @@ async fn run_crawl() -> anyhow::Result<()> {
         None
     };
 
-    // 5. Build source display name map + channel routing map
+    do_crawl(&cfg, &client, &cfg.database.path, notifier_opt.as_ref()).await
+}
+
+/// 봇 서버 모드: 텔레그램 커맨드 수신 + 자동 크롤링.
+/// 이 모드 하나만 실행하면 모든 기능이 동작한다.
+async fn run_serve() -> anyhow::Result<()> {
+    let config_path = Path::new("config.toml");
+    let cfg = config::Config::load(config_path)?;
+    let database = db::Database::init(&cfg.database.path)?;
+
+    let bot = Bot::from_env();
+    tracing::info!("Starting serve mode (bot commands + auto crawl)...");
+
+    let state = Arc::new(bot_commands::BotState {
+        db: Arc::new(Mutex::new(database)),
+        sources: cfg.sources.clone(),
+    });
+
+    // 봇 커맨드 등록
+    if let Err(e) = bot
+        .set_my_commands(bot_commands::Command::bot_commands())
+        .await
+    {
+        tracing::warn!(error = %e, "Failed to set bot commands menu");
+    }
+
+    // 자동 크롤링 백그라운드 스레드 (별도 tokio 런타임).
+    // rusqlite::Connection이 Sync가 아니므로 tokio::spawn 대신 별도 스레드 사용.
+    let crawl_cfg = cfg.clone();
+    let crawl_bot = bot.clone();
+    let db_path = cfg.database.path.clone();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to build crawl runtime");
+        rt.block_on(crawl_loop(crawl_cfg, crawl_bot, db_path));
+    });
+
+    // 텔레그램 long polling (메인 태스크)
+    let handler = dptree::entry()
+        .branch(
+            Update::filter_message()
+                .filter_command::<bot_commands::Command>()
+                .endpoint(
+                    |bot: Bot, msg: Message, cmd: bot_commands::Command, state: Arc<bot_commands::BotState>| async move {
+                        bot_commands::handle_command(bot, msg, cmd, state).await
+                    },
+                ),
+        );
+
+    Dispatcher::builder(bot, handler)
+        .dependencies(dptree::deps![state])
+        .default_handler(|_| async {})
+        .error_handler(Arc::new(|err| {
+            Box::pin(async move {
+                tracing::error!(error = %err, "Dispatch error");
+            })
+        }))
+        .enable_ctrlc_handler()
+        .build()
+        .dispatch()
+        .await;
+
+    Ok(())
+}
+
+/// 백그라운드 자동 크롤링 루프.
+/// 시작 즉시 1회 실행 후, 설정된 간격으로 반복.
+async fn crawl_loop(cfg: config::Config, bot: Bot, db_path: String) {
+    let interval = Duration::from_secs(cfg.bot.crawl_interval_secs);
+    tracing::info!(
+        interval_secs = cfg.bot.crawl_interval_secs,
+        "Auto-crawl loop started"
+    );
+
+    let client = match build_http_client() {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to build HTTP client for crawl loop");
+            return;
+        }
+    };
+
+    let (channel_id, log_channel_id) = resolve_channels(&cfg);
+    let notifier = notifier::Notifier::new(
+        bot,
+        channel_id,
+        log_channel_id,
+        cfg.bot.message_delay_ms,
+    );
+
+    loop {
+        if let Err(e) = do_crawl(&cfg, &client, &db_path, Some(&notifier)).await {
+            tracing::error!(error = %e, "Crawl cycle failed");
+        }
+
+        tracing::info!(next_in_secs = interval.as_secs(), "Sleeping until next crawl");
+        sleep(interval).await;
+    }
+}
+
+/// 크롤링 핵심 로직 (crawl + notify + DM).
+/// `run_crawl()`과 `crawl_loop()` 모두 이 함수를 호출한다.
+/// 매 호출마다 자체 DB 연결을 열어 Send 안전성을 보장한다.
+async fn do_crawl(
+    cfg: &config::Config,
+    client: &reqwest::Client,
+    db_path: &str,
+    notifier_opt: Option<&notifier::Notifier>,
+) -> anyhow::Result<()> {
+    let database = db::Database::init(db_path)?;
+    // Build source display name map + channel routing map
     let display_names: HashMap<String, String> = cfg
         .sources
         .iter()
@@ -109,7 +202,7 @@ async fn run_crawl() -> anyhow::Result<()> {
         .filter_map(|s| s.channel.as_ref().map(|ch| (s.key.clone(), ch.clone())))
         .collect();
 
-    // 6. Crawl each enabled source
+    // Crawl each enabled source
     let enabled_sources = cfg.enabled_sources();
     tracing::info!(count = enabled_sources.len(), "Starting crawl");
 
@@ -121,7 +214,7 @@ async fn run_crawl() -> anyhow::Result<()> {
         let source_key = parser.source_key().to_string();
         let display_name = parser.display_name().to_string();
 
-        match fetch_with_retry(parser.as_ref(), &client).await {
+        match fetch_with_retry(parser.as_ref(), client).await {
             Ok(notices) => {
                 let mut new_count = 0u32;
                 let last_id = notices.first().map(|n| n.notice_id.clone());
@@ -166,7 +259,7 @@ async fn run_crawl() -> anyhow::Result<()> {
                         "\u{26a0}\u{fe0f} 크롤링 경고\n\n소스: {}\n상태: 연속 {}회 실패\n에러: {}",
                         source_key, err_count, e
                     );
-                    if let Some(ref notifier) = notifier_opt {
+                    if let Some(notifier) = notifier_opt {
                         let _ = notifier.send_error_alert(&alert).await;
                     }
                 }
@@ -176,12 +269,11 @@ async fn run_crawl() -> anyhow::Result<()> {
         }
     }
 
-    // 7. Send pending notifications
+    // Send pending notifications
     let pending = database.get_pending(cfg.bot.max_notices_per_run, &display_names)?;
-    let sent = if let Some(ref notifier) = notifier_opt {
+    let sent = if let Some(notifier) = notifier_opt {
         let sent_ids = notifier.send_batch(&pending, cfg.bot.max_notices_per_run, &channel_map).await?;
 
-        // Mark only successfully sent notices as notified
         for id in &sent_ids {
             database.mark_notified(*id)?;
         }
@@ -201,7 +293,7 @@ async fn run_crawl() -> anyhow::Result<()> {
         pending.len()
     };
 
-    // 8. 마감일 추출 + 저장
+    // 마감일 추출 + 저장
     {
         use crate::deadline::extract_deadline;
         let recent = database.get_recent_for_dm(100).unwrap_or_default();
@@ -212,9 +304,9 @@ async fn run_crawl() -> anyhow::Result<()> {
         }
     }
 
-    // 9. DM 발송 (구독자에게 개인 메시지)
-    let dm_sent = if let Some(ref notifier_ref) = notifier_opt {
-        let engine = dm_engine::DmEngine::new(&notifier_ref.bot(), &database, cfg.bot.message_delay_ms);
+    // DM 발송 (구독자에게 개인 메시지)
+    let dm_sent = if let Some(notifier) = notifier_opt {
+        let engine = dm_engine::DmEngine::new(notifier.bot(), &database, cfg.bot.message_delay_ms);
         match engine.process().await {
             Ok(count) => count,
             Err(e) => {
@@ -226,7 +318,7 @@ async fn run_crawl() -> anyhow::Result<()> {
         0
     };
 
-    // 10. Summary
+    // Summary
     let summary = format!(
         "\u{2705} Crawl done: {} new / {} ch-sent / {} dm | {}",
         total_new,
@@ -236,7 +328,7 @@ async fn run_crawl() -> anyhow::Result<()> {
     );
     tracing::info!("{}", summary);
 
-    if let Some(ref notifier) = notifier_opt {
+    if let Some(notifier) = notifier_opt {
         if total_new > 0 || sent > 0 || dm_sent > 0 {
             let _ = notifier.send_summary(&summary).await;
         }
@@ -245,53 +337,28 @@ async fn run_crawl() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// 봇 서버 모드: 텔레그램 커맨드 수신 (long polling).
-async fn run_serve() -> anyhow::Result<()> {
-    let config_path = Path::new("config.toml");
-    let cfg = config::Config::load(config_path)?;
-    let database = db::Database::init(&cfg.database.path)?;
+/// HTTP 클라이언트 생성 (SSL 인증서 문제 우회).
+fn build_http_client() -> anyhow::Result<reqwest::Client> {
+    Ok(reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .user_agent("CBNU-Notice-Bot/1.0 (student project)")
+        .timeout(Duration::from_secs(15))
+        .build()?)
+}
 
-    let bot = Bot::from_env();
-    tracing::info!("Starting serve mode (long polling)...");
+/// 채널 ID 결정 (환경변수 > config).
+fn resolve_channels(cfg: &config::Config) -> (String, Option<String>) {
+    let channel_id = std::env::var("CHANNEL_ID")
+        .or_else(|_| std::env::var("TELEGRAM_CHANNEL_ID"))
+        .unwrap_or_else(|_| cfg.bot.telegram_channel.clone());
 
-    let state = Arc::new(bot_commands::BotState {
-        db: Arc::new(Mutex::new(database)),
-        sources: cfg.sources.clone(),
-    });
+    let log_channel_id = std::env::var("LOG_CHANNEL_ID")
+        .or_else(|_| std::env::var("TELEGRAM_LOG_CHANNEL"))
+        .ok()
+        .or_else(|| cfg.bot.log_channel.clone())
+        .filter(|s| !s.is_empty());
 
-    // 봇 커맨드 등록
-    if let Err(e) = bot
-        .set_my_commands(bot_commands::Command::bot_commands())
-        .await
-    {
-        tracing::warn!(error = %e, "Failed to set bot commands menu");
-    }
-
-    let handler = dptree::entry()
-        .branch(
-            Update::filter_message()
-                .filter_command::<bot_commands::Command>()
-                .endpoint(
-                    |bot: Bot, msg: Message, cmd: bot_commands::Command, state: Arc<bot_commands::BotState>| async move {
-                        bot_commands::handle_command(bot, msg, cmd, state).await
-                    },
-                ),
-        );
-
-    Dispatcher::builder(bot, handler)
-        .dependencies(dptree::deps![state])
-        .default_handler(|_| async {})
-        .error_handler(Arc::new(|err| {
-            Box::pin(async move {
-                tracing::error!(error = %err, "Dispatch error");
-            })
-        }))
-        .enable_ctrlc_handler()
-        .build()
-        .dispatch()
-        .await;
-
-    Ok(())
+    (channel_id, log_channel_id)
 }
 
 /// 최대 3회 재시도 (2초 → 4초 → 8초 backoff)
