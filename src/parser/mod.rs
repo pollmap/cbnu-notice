@@ -1,5 +1,7 @@
+pub mod ciboard;
 pub mod egov;
 pub mod php_master;
+pub mod xe_board;
 
 use async_trait::async_trait;
 use reqwest::Client;
@@ -30,6 +32,8 @@ pub fn create_parser(source: &SourceConfig) -> Box<dyn NoticeParser> {
     match source.parser.as_str() {
         "egov" => Box::new(egov::EgovParser::from_config(source)),
         "php_master" => Box::new(php_master::PhpMasterParser::from_config(source)),
+        "ciboard" => Box::new(ciboard::CiBoardParser::from_config(source)),
+        "xe_board" => Box::new(xe_board::XeBoardParser::from_config(source)),
         other => panic!("Unknown parser type: {other}"),
     }
 }
