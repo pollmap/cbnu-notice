@@ -46,10 +46,30 @@ pub async fn handle_command(
     state: Arc<BotState>,
 ) -> ResponseResult<()> {
     let chat_id = msg.chat.id;
-    let user_id = msg.from.as_ref().map(|u| u.id.0 as i64).unwrap_or(0);
+
+    // from이 없으면 (그룹 시스템 메시지 등) 무시
+    let user = match msg.from.as_ref() {
+        Some(u) => u,
+        None => {
+            bot.send_message(chat_id, "\u{26a0}\u{fe0f} DM으로 사용해주세요.")
+                .await?;
+            return Ok(());
+        }
+    };
+    let user_id = user.id.0 as i64;
+
+    // 모든 커맨드에서 사용자 자동 등록 (users 테이블에 없으면 DM 매칭 안 됨)
+    {
+        let db = state.db.lock().unwrap();
+        let _ = db.register_user(
+            user_id,
+            user.username.as_deref(),
+            Some(&user.first_name),
+        );
+    }
 
     let response = match cmd {
-        Command::Start => handle_start(&state, user_id, &msg),
+        Command::Start => handle_start(user_id, &user.first_name),
         Command::Help => handle_help(),
         Command::Sub(kw) => handle_sub(&state, user_id, &kw),
         Command::Unsub(kw) => handle_unsub(&state, user_id, &kw),
@@ -66,34 +86,19 @@ pub async fn handle_command(
     Ok(())
 }
 
-fn handle_start(state: &BotState, user_id: i64, msg: &Message) -> String {
-    let username = msg
-        .from
-        .as_ref()
-        .and_then(|u| u.username.as_deref());
-    let first_name = msg
-        .from
-        .as_ref()
-        .map(|u| u.first_name.as_str());
-
-    let db = state.db.lock().unwrap();
-    match db.register_user(user_id, username, first_name) {
-        Ok(()) => {
-            let name = first_name.unwrap_or("사용자");
-            format!(
-                "\u{1f44b} 안녕하세요, {}님!\n\n\
-                 <b>충북대 공지 알림 봇</b>에 등록되었습니다.\n\n\
-                 \u{1f4cc} <b>사용 방법:</b>\n\
-                 • /sub 장학금 → '장학금' 포함 공지 DM\n\
-                 • /dept biz → 경영학부 공지 DM\n\
-                 • /mysubs → 내 구독 현황\n\
-                 • /sources → 학과 목록\n\
-                 • /help → 전체 도움말",
-                name
-            )
-        }
-        Err(e) => format!("\u{274c} 등록 실패: {}", e),
-    }
+fn handle_start(user_id: i64, first_name: &str) -> String {
+    let _ = user_id; // 이미 handle_command에서 등록 완료
+    format!(
+        "\u{1f44b} 안녕하세요, {}님!\n\n\
+         <b>충북대 공지 알림 봇</b>에 등록되었습니다.\n\n\
+         \u{1f4cc} <b>사용 방법:</b>\n\
+         • /sub 장학금 → '장학금' 포함 공지 DM\n\
+         • /dept biz → 경영학부 공지 DM\n\
+         • /mysubs → 내 구독 현황\n\
+         • /sources → 학과 목록\n\
+         • /help → 전체 도움말",
+        first_name
+    )
 }
 
 fn handle_help() -> String {
