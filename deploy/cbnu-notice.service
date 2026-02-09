@@ -1,0 +1,23 @@
+[Unit]
+Description=CBNU Notice Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cbnu-notice
+ExecStart=/home/ubuntu/cbnu-notice/cbnu-notice-bot serve
+Restart=always
+RestartSec=10
+
+# 환경변수 파일에서 시크릿 로드
+EnvironmentFile=/home/ubuntu/cbnu-notice/.env
+
+# 보안 강화
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/cbnu-notice
+
+[Install]
+WantedBy=multi-user.target

@@ -47,6 +47,11 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
+/// DB 경로 결정 (환경변수 DATABASE_PATH > config).
+fn resolve_db_path(cfg: &config::Config) -> String {
+    std::env::var("DATABASE_PATH").unwrap_or_else(|_| cfg.database.path.clone())
+}
+
 /// 크롤링 1회 실행 (CLI 또는 cron용).
 async fn run_crawl() -> anyhow::Result<()> {
     let config_path = Path::new("config.toml");
@@ -57,6 +62,7 @@ async fn run_crawl() -> anyhow::Result<()> {
     };
 
     let client = build_http_client()?;
+    let db_path = resolve_db_path(&cfg);
 
     let (channel_id, log_channel_id) = resolve_channels(&cfg);
 
@@ -77,7 +83,7 @@ async fn run_crawl() -> anyhow::Result<()> {
         None
     };
 
-    do_crawl(&cfg, &client, &cfg.database.path, notifier_opt.as_ref()).await
+    do_crawl(&cfg, &client, &db_path, notifier_opt.as_ref()).await
 }
 
 /// 봇 서버 모드: 텔레그램 커맨드 수신 + 자동 크롤링.
@@ -85,7 +91,8 @@ async fn run_crawl() -> anyhow::Result<()> {
 async fn run_serve() -> anyhow::Result<()> {
     let config_path = Path::new("config.toml");
     let cfg = config::Config::load(config_path)?;
-    let database = db::Database::init(&cfg.database.path)?;
+    let db_path = resolve_db_path(&cfg);
+    let database = db::Database::init(&db_path)?;
 
     let bot = Bot::from_env();
     tracing::info!("Starting serve mode (bot commands + auto crawl)...");
@@ -107,13 +114,13 @@ async fn run_serve() -> anyhow::Result<()> {
     // rusqlite::Connection이 Sync가 아니므로 tokio::spawn 대신 별도 스레드 사용.
     let crawl_cfg = cfg.clone();
     let crawl_bot = bot.clone();
-    let db_path = cfg.database.path.clone();
+    let db_path_clone = db_path.clone();
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .expect("Failed to build crawl runtime");
-        rt.block_on(crawl_loop(crawl_cfg, crawl_bot, db_path));
+        rt.block_on(crawl_loop(crawl_cfg, crawl_bot, db_path_clone));
     });
 
     // 텔레그램 long polling (메인 태스크)
