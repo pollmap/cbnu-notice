@@ -22,6 +22,11 @@ impl Notifier {
         }
     }
 
+    /// Bot 인스턴스 참조 (DM 엔진용).
+    pub fn bot(&self) -> &Bot {
+        &self.bot
+    }
+
     /// Send a single notice to the main channel.
     pub async fn send_notice(&self, notice: &Notice) -> anyhow::Result<()> {
         let category = Category::from_str_tag(&notice.category);

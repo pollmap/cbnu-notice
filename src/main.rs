@@ -1,16 +1,21 @@
+mod bot_commands;
 mod category;
 mod config;
+mod deadline;
 mod db;
+mod dm_engine;
 mod error;
 mod notifier;
 mod parser;
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use clap::Parser;
 use teloxide::prelude::*;
+use teloxide::utils::command::BotCommands;
 use tokio::time::sleep;
 
 use crate::parser::{NoticeParser, RawNotice};
@@ -38,11 +43,7 @@ async fn main() -> anyhow::Result<()> {
 
     match cli {
         Cli::Crawl => run_crawl().await,
-        Cli::Serve => {
-            tracing::info!("Serve mode is planned for Phase 2");
-            println!("Serve mode not yet implemented. Use `crawl` subcommand.");
-            Ok(())
-        }
+        Cli::Serve => run_serve().await,
     }
 }
 
@@ -193,20 +194,95 @@ async fn run_crawl() -> anyhow::Result<()> {
         0
     };
 
-    // 8. Summary
+    // 8. 마감일 추출 + 저장
+    {
+        use crate::deadline::extract_deadline;
+        let recent = database.get_recent_for_dm(100).unwrap_or_default();
+        for notice in &recent {
+            if let Some(dl) = extract_deadline(&notice.title) {
+                let _ = database.set_deadline(notice.id, &dl.format("%Y-%m-%d").to_string());
+            }
+        }
+    }
+
+    // 9. DM 발송 (구독자에게 개인 메시지)
+    let dm_sent = if let Some(ref notifier_ref) = notifier_opt {
+        let engine = dm_engine::DmEngine::new(&notifier_ref.bot(), &database, cfg.bot.message_delay_ms);
+        match engine.process().await {
+            Ok(count) => count,
+            Err(e) => {
+                tracing::error!(error = %e, "DM engine failed");
+                0
+            }
+        }
+    } else {
+        0
+    };
+
+    // 10. Summary
     let summary = format!(
-        "\u{2705} Crawl done: {} new / {} sent | {}",
+        "\u{2705} Crawl done: {} new / {} ch-sent / {} dm | {}",
         total_new,
         sent,
+        dm_sent,
         source_stats.join(" ")
     );
     tracing::info!("{}", summary);
 
     if let Some(ref notifier) = notifier_opt {
-        if total_new > 0 || sent > 0 {
+        if total_new > 0 || sent > 0 || dm_sent > 0 {
             let _ = notifier.send_summary(&summary).await;
         }
     }
+
+    Ok(())
+}
+
+/// 봇 서버 모드: 텔레그램 커맨드 수신 (long polling).
+async fn run_serve() -> anyhow::Result<()> {
+    let config_path = Path::new("config.toml");
+    let cfg = config::Config::load(config_path)?;
+    let database = db::Database::init(&cfg.database.path)?;
+
+    let bot = Bot::from_env();
+    tracing::info!("Starting serve mode (long polling)...");
+
+    let state = Arc::new(bot_commands::BotState {
+        db: Arc::new(Mutex::new(database)),
+        sources: cfg.sources.clone(),
+    });
+
+    // 봇 커맨드 등록
+    if let Err(e) = bot
+        .set_my_commands(bot_commands::Command::bot_commands())
+        .await
+    {
+        tracing::warn!(error = %e, "Failed to set bot commands menu");
+    }
+
+    let handler = dptree::entry()
+        .branch(
+            Update::filter_message()
+                .filter_command::<bot_commands::Command>()
+                .endpoint(
+                    |bot: Bot, msg: Message, cmd: bot_commands::Command, state: Arc<bot_commands::BotState>| async move {
+                        bot_commands::handle_command(bot, msg, cmd, state).await
+                    },
+                ),
+        );
+
+    Dispatcher::builder(bot, handler)
+        .dependencies(dptree::deps![state])
+        .default_handler(|_| async {})
+        .error_handler(Arc::new(|err| {
+            Box::pin(async move {
+                tracing::error!(error = %err, "Dispatch error");
+            })
+        }))
+        .enable_ctrlc_handler()
+        .build()
+        .dispatch()
+        .await;
 
     Ok(())
 }
