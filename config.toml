@@ -1,8 +1,9 @@
 [bot]
-telegram_channel = "@cbnu_notice"
+telegram_channel = "@cbnu_notice"       # 기본 채널 (대학 본부 공지)
 log_channel = ""
 max_notices_per_run = 20
 message_delay_ms = 150
+# 학과 공지는 각 source에서 channel = "@cbnu_dept" 로 지정
 
 [database]
 path = "notices.db"
@@ -45,6 +46,7 @@ display_name = "🏢 경영학부"
 parser = "php_master"
 url = "https://biz.chungbuk.ac.kr"
 enabled = true
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "7"
@@ -55,6 +57,7 @@ display_name = "🔭 천문우주학과"
 parser = "php_master"
 url = "https://ast.chungbuk.ac.kr"
 enabled = false
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "146"
@@ -65,6 +68,7 @@ display_name = "⚛️ 물리학과"
 parser = "php_master"
 url = "https://physics.chungbuk.ac.kr"
 enabled = false
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "126"
@@ -75,6 +79,7 @@ display_name = "📐 수학과"
 parser = "php_master"
 url = "https://math.chungbuk.ac.kr"
 enabled = false
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "146"
@@ -85,6 +90,7 @@ display_name = "🌱 원예과학과"
 parser = "php_master"
 url = "https://hortisci.chungbuk.ac.kr"
 enabled = false
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "5"
@@ -95,6 +101,7 @@ display_name = "🍽️ 식품생명공학과"
 parser = "php_master"
 url = "https://food.chungbuk.ac.kr"
 enabled = false
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "244"
@@ -105,6 +112,7 @@ display_name = "🧬 생화학과"
 parser = "php_master"
 url = "https://biochem.chungbuk.ac.kr"
 enabled = false
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "149"
@@ -115,6 +123,7 @@ display_name = "🏥 간호학과"
 parser = "php_master"
 url = "https://nursing.chungbuk.ac.kr"
 enabled = false
+channel = "@cbnu_dept"
 
 [source.params]
 pg_idx = "183"

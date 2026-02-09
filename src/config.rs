@@ -36,6 +36,8 @@ pub struct SourceConfig {
     pub params: HashMap<String, String>,
     #[serde(default = "default_true")]
     pub enabled: bool,
+    /// 이 소스의 공지를 보낼 채널. 미지정 시 bot.telegram_channel 사용.
+    pub channel: Option<String>,
 }
 
 fn default_max_notices() -> usize {
@@ -96,6 +98,7 @@ display_name = "경영학부"
 parser = "php_master"
 url = "https://biz.chungbuk.ac.kr"
 enabled = false
+channel = "@cbnu_dept"
 [source.params]
 pg_idx = "7"
 "#;

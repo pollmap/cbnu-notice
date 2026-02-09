@@ -195,6 +195,7 @@ mod tests {
             url: "https://www.chungbuk.ac.kr/www/selectBbsNttList.do".into(),
             params,
             enabled: true,
+            channel: None,
         }
     }
 

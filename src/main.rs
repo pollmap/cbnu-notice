@@ -96,11 +96,17 @@ async fn run_crawl() -> anyhow::Result<()> {
         None
     };
 
-    // 5. Build source display name map
+    // 5. Build source display name map + channel routing map
     let display_names: HashMap<String, String> = cfg
         .sources
         .iter()
         .map(|s| (s.key.clone(), s.display_name.clone()))
+        .collect();
+
+    let channel_map: HashMap<String, String> = cfg
+        .sources
+        .iter()
+        .filter_map(|s| s.channel.as_ref().map(|ch| (s.key.clone(), ch.clone())))
         .collect();
 
     // 6. Crawl each enabled source
@@ -173,7 +179,7 @@ async fn run_crawl() -> anyhow::Result<()> {
     // 7. Send pending notifications
     let pending = database.get_pending(cfg.bot.max_notices_per_run, &display_names)?;
     let sent = if let Some(ref notifier) = notifier_opt {
-        let sent_count = notifier.send_batch(&pending, cfg.bot.max_notices_per_run).await?;
+        let sent_count = notifier.send_batch(&pending, cfg.bot.max_notices_per_run, &channel_map).await?;
 
         // Mark sent notices as notified
         for notice in pending.iter().take(sent_count) {

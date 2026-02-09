@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use teloxide::prelude::*;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, ParseMode};
 use tokio::time::{sleep, Duration};
@@ -27,8 +29,9 @@ impl Notifier {
         &self.bot
     }
 
-    /// Send a single notice to the main channel.
-    pub async fn send_notice(&self, notice: &Notice) -> anyhow::Result<()> {
+    /// Send a single notice to the specified channel (or default).
+    pub async fn send_notice(&self, notice: &Notice, channel_override: Option<&str>) -> anyhow::Result<()> {
+        let target_channel = channel_override.unwrap_or(&self.channel_id);
         let category = Category::from_str_tag(&notice.category);
         let cat_tag = if notice.category != "general" {
             format!("[{}] ", category.label())
@@ -62,8 +65,8 @@ impl Notifier {
         )]]);
 
         self.bot
-            .send_message(ChatId(0), &text) // ChatId will be overridden
-            .chat_id(self.channel_id.clone())
+            .send_message(ChatId(0), &text)
+            .chat_id(target_channel.to_string())
             .parse_mode(ParseMode::MarkdownV2)
             .reply_markup(keyboard)
             .await
@@ -73,10 +76,17 @@ impl Notifier {
     }
 
     /// Send a batch of notices, respecting rate limits and max count.
-    pub async fn send_batch(&self, notices: &[Notice], max: usize) -> anyhow::Result<usize> {
+    /// `channel_map`: source_key → channel override.
+    pub async fn send_batch(
+        &self,
+        notices: &[Notice],
+        max: usize,
+        channel_map: &HashMap<String, String>,
+    ) -> anyhow::Result<usize> {
         let mut sent = 0;
         for notice in notices.iter().take(max) {
-            match self.send_notice(notice).await {
+            let ch = channel_map.get(&notice.source_key).map(|s| s.as_str());
+            match self.send_notice(notice, ch).await {
                 Ok(()) => {
                     sent += 1;
                     tracing::info!(
